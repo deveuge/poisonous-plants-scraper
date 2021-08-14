@@ -1,0 +1,15 @@
+{
+  "name": "poisonous-plants-scraper",
+  "version": "1.0.0",
+  "description": "Scraper that collects information about poisonous plants to pets",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js"
+  },
+  "author": "deveuge",
+  "license": "ISC",
+  "dependencies": {
+    "puppeteer": "^10.2.0"
+  }
+}
