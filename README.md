@@ -34,7 +34,7 @@ npm start
 
 The scraper will extract the data and it will save it in the root folder as a new file: "data.json".
 
-If you want to visualize in real time the execution of the script in a Chromium browser, you can edit the "browser.js" file and set the "headless" parameter of the launch() method to "false" in line 8:
+If you want to visualize in real time the execution of the script in a Chromium browser, you can edit the "browser.js" file and set the "headless" parameter of the launch() method to "false" in line 17:
 ```
 browser = await puppeteer.launch({
     headless: false,
