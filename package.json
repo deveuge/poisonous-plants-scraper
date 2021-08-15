@@ -10,6 +10,8 @@
   "author": "deveuge",
   "license": "ISC",
   "dependencies": {
-    "puppeteer": "^10.2.0"
+    "puppeteer": "^10.2.0",
+    "puppeteer-cluster": "^0.22.0",
+    "puppeteer-page-proxy": "^1.2.8"
   }
 }

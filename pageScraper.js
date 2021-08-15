@@ -1,9 +1,15 @@
+const useProxy = require('puppeteer-page-proxy');
+const { Cluster } = require('puppeteer-cluster');
+
 const scraperObject = {
-    url: 'https://www.rover.com/blog/poisonous-plants',
-    async scraper(browser){
+    urlList: 'https://www.rover.com/blog/poisonous-plants',
+    urlInfo: 'https://garden.org/plants/search/text/?q=',
+
+    async scraperList(browser){
         let page = await browser.newPage();
-        console.log(`> Navigating to ${this.url}...`);
-        await page.goto(this.url);
+
+        console.log(`> Navigating to ${this.urlList}...`);
+        await page.goto(this.urlList);
 
         let scrapedData = [];
         async function scrape() {
@@ -11,6 +17,7 @@ const scraperObject = {
             for(data in pageData) {
                 scrapedData.push(pageData[data]);
             }
+            
             try{
                 await page.click('.paginate_button.next:not(.disabled)');   
                 await page.click('.scroll-to-top');
@@ -22,7 +29,29 @@ const scraperObject = {
         }
         
         await scrape();
+
         await page.close();
+        return scrapedData;
+    },
+    
+    async scraperInfo(browser, scrapedData){ 
+        const cluster = await Cluster.launch({
+            concurrency: Cluster.CONCURRENCY_CONTEXT,
+            maxConcurrency: 4,
+        });
+
+        await cluster.task(async ({ page, data }) => {
+            const { browser, url, index } = data;
+            scrapedData[index] = await scrapePlantInfo(browser, url, scrapedData[index]);
+        });
+
+        for (let i = 0; i < scrapedData.length; i++) {
+            cluster.queue({ browser: browser, url: this.urlInfo, index: i });
+        }
+
+        await cluster.idle();
+        await cluster.close();
+
         return scrapedData;
     }
 }
@@ -56,10 +85,10 @@ async function scrapeCurrentPage(page) {
         
         let extractRowData = function (el, i, arr) {
             let dataObject = {};
-            dataObject.image = el.querySelector('.plant-image > img').src;
+            dataObject.icon = el.querySelector('.plant-image > img').src;
             dataObject.name = {
-                common: el.querySelector('.tile-title').textContent,
-                scientific: el.querySelector('.scientific-name').textContent
+                common: el.querySelector('.tile-title').textContent.replace("’", "'"),
+                scientific: el.querySelector('.scientific-name').textContent.replace("’", "'")
             }
             dataObject.type = el.querySelector('.type > img').title;
             let symptomArray = [];
@@ -83,6 +112,69 @@ async function scrapeCurrentPage(page) {
     });
 
     return data;
+}
+
+async function scrapePlantInfo(browser, url, element) {
+    let page = await browser.newPage();
+    await page.authenticate({
+        username: 'scraperapi',
+        password: 'PROXY_PASSWORD',
+    });
+    
+    await page.setRequestInterception(true);
+    page.on('request', async request => {
+        if (['image', 'stylesheet', 'font', 'script'].indexOf(request.resourceType()) !== -1) {
+            request.abort();
+        } else {
+            request.continue();
+        }
+    });
+    
+    console.log(`> Navigating to ${url + element.name.common.replace(" ", "+")}...`);
+    await page.goto(url + element.name.common.replace(" ", "+"), {timeout: 180000});
+
+    // Select search result
+    try {
+        await page.waitForSelector('.table.pretty-table');
+        const links = await page.$x(`//td/a[contains(., '${element.name.common}')]`);
+        await links[0].click();
+        
+        // Collect plant info
+        await page.waitForSelector('.table.simple-table > tbody > tr');
+        let dataObject = await page.$$eval('.table.simple-table > tbody > tr', row => {
+            let extractRowData = function (el, i, arr) {
+                let key = el.querySelector('td:first-of-type').textContent.toLowerCase();
+                key = key.replaceAll(":", "").replace(/(\s{1}\w{1})/g, match => match.toUpperCase()).replaceAll(" ", "");
+
+                let value = el.querySelector('td:last-of-type').textContent.trim();
+                if(value.split("\n").length > 1) {
+                    value = value.replaceAll("\n", ". ");
+                } else {
+                    value = value.replaceAll("\n", "");
+                }
+                
+                return {[key]: value};
+            }
+            // Extract the data
+            return row.map(extractRowData);
+        });
+
+        dataObject = Object.assign(...dataObject);
+        
+        await page.waitForSelector('.thumb');
+        dataObject.image = await page.evaluate(async () => {
+            return document.querySelector('.thumb').src;
+        })
+        console.log(dataObject)
+
+        element.detailedInfo = dataObject;
+    } catch(err) {
+        // No plant found, returning without detailed data
+        console.log(err)
+    }
+
+    await page.close();
+    return element;
 }
 
 module.exports = scraperObject;
