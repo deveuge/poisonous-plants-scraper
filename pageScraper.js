@@ -1,4 +1,3 @@
-const useProxy = require('puppeteer-page-proxy');
 const { Cluster } = require('puppeteer-cluster');
 
 const scraperObject = {

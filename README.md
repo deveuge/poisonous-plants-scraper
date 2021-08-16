@@ -10,13 +10,13 @@ Poisonous-plants-scraper requires the following stack:
 The first step after downloading the code should be configuring the proxy.
 Some websites protect themselves from web scraping, so to bypass their filters the script uses a proxy to perform the multiple petitions to gather detailed info about the plants.
 
-In the "index.js" file, you should configure your filter host and port at line 7:
+In the "index.js" file, you should configure your filter host and port at line 11:
 ```
 let browserInstanceWithProxy = browserObject.startBrowser("http://<PROXY_HOST>:<PROXY_PORT>");
 ```
 As an example, the script uses the one provided by the free plan of [Scraper API](https://www.scraperapi.com): http://proxy-server.scraperapi.com:8001
 
-Depending on the type of proxy, it may also be required to configure its authentication. You can remove or edit the authentication in the file "pageScrapper.js" at line 119:
+Depending on the type of proxy, it may also be required to configure its authentication. You can remove or edit the authentication in the file "pageScrapper.js" at line 120:
 ```
 await page.authenticate({
     username: <PROXY_USERNAME>,
@@ -24,7 +24,7 @@ await page.authenticate({
 });
 ```
 In the case that you want to use Scraper API as well, you must configure the user as "scraperapi" and the password as the API key that is assigned to each user after registering.
-The free plan gives you 5.000 request per month and the execution of the script consumes around 1.000.
+The free plan gives you 5.000 request per month and the execution of the script consumes around 350.
 
 After the proxy is correctly configured, execute the following commands on the root folder:
 ```
